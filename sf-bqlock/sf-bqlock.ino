@@ -17,8 +17,7 @@
   I2C_ADDR_RTC    0x68
 */
 
-//Clock variables
-RTC_DS1307 RTC;
+
 LiquidCrystal lcd(0);
 
 //Encoder variables
@@ -47,22 +46,21 @@ int lastLSB = 0;
 //Other variables
 bool debug = true;
 
-//alarm variables
+//clock & alarm variables
+RTC_DS1307 RTC;
+
 bool isAlarmOn = false;
 int alarmHour=13, alarmMinute=48;
 DateTime now;
 
-int pinBuz = 6;
 bool playedOnce = false;
+int oldMinute;
+
+int pinBuz = 6;
 
 int mode = 0;
-int maxMode = 3;
+int maxMode = 2;
 
-boolean checkTime(){
-  //returns true when failure time and date it set.
-  Serial.println("Checking time");
-  return (now.day()==1 && now.month()==1 && now.year()== 2000 && now.hour()==0 && now.minute()==0 && now.second()==0);
-}
 void setup () {
 
   Serial.begin(19200); // Establece la velocidad de datos del puerto serie
@@ -73,55 +71,36 @@ void setup () {
   //Encoder setup
   initializeEncoder();
   //RTC setup
-  RTC.begin();
-  getTime();
-  if(checkTime()){
-    lcd.clear();
-    Serial.println("Trying to reload time...");
-    RTC.adjust(DateTime(__DATE__, __TIME__)); // Establece la fecha y hora (Comentar una vez establecida la hora)
-    if(checkTime){
-      Serial.println("Impossible to reload");
-    }
-    while(true){
-      lcd.home();
-      lcd.print("RELOAD CLOCK!!");
-    }
-  }
+  initializeRTC();
 
   pinMode(pinBuz, OUTPUT);
 
 }
 
 void loop() {
-  getTime();
   managePushEncoder();
   manageMode();
-  getTime();
-  printAlarmStatus();
   checkAlarm();
   if (debug) Serial.println(encoderValue);
 }
-
 void manageMode(){
   switch (mode){
     case 0:
-      getTime();
+      getTime(false);
       printAlarmStatus();
-      delay(userDelay);
       break;
     case 1:
       //cambio hora alarma
       setAlarmHour();
       delay(userDelay);
-      break;
-    case 2:
-      //cambio min alarma
       setAlarmMin();
+      isAlarmOn=true;
       delay(userDelay);
+      mode = 0;
+      getTime(true);
       break;
   }
 }
-
 void setAlarmHour(){
   lastEncoded = 3; //You must initialize the encoders pins on 11 (3) !!!
   encoderValue = 0;
@@ -131,18 +110,20 @@ void setAlarmHour(){
   lcd.print("Set hour: ");
   while(!digitalRead(encoderSwitchPin)){
     lcd.setCursor(10,0);
-    checkDigits(alarmHour);
     alarmHour = constrain(encoderValue,0,96)/4;
+    Serial.println(alarmHour);
+    checkDigits(alarmHour);
   }
+  Serial.print("Set Hour: ");
+  Serial.println(alarmHour);
   lcd.clear();
   lcd.print("HOUR SET");
-  delay(userDelay*3);
-
+  delay(userDelay*1);
 }
 void setAlarmMin(){
   lastEncoded = 3; //You must initialize the encoders pins on 11 (3) !!!
   encoderValue = 0;
-  alarmHour = 0;
+  alarmMinute = 0;
   lcd.clear();
   lcd.home();
   lcd.print("Set min: ");
@@ -153,7 +134,7 @@ void setAlarmMin(){
   }
   lcd.clear();
   lcd.print("minute SET");
-  delay(userDelay*3);
+  delay(userDelay*1);
 
 }
 void checkAlarm(){
@@ -177,9 +158,11 @@ void printAlarmStatus(){
   lcd.print("Alarm");
   lcd.setCursor(11,1);
   if (isAlarmOn){
-    lcd.print("On ");
+    checkDigits(alarmHour);
+    lcd.print(":");
+    checkDigits(alarmMinute);
   }else{
-    lcd.print("Off");
+    lcd.print("Off  ");
   }
 }
 void managePushEncoder() {
@@ -206,10 +189,7 @@ void managePushEncoder() {
       if(mode == maxMode){
         mode = 0;
       }
-      if (debug){
-        Serial.print("Mode = ");
-        Serial.println(mode);
-      }
+
       delay(userDelay);
 
     }
@@ -237,23 +217,24 @@ void updateEncoder() {
 
   lastEncoded = encoded; //store this value for next time
 }
-void getTime() {
+void getTime(bool forced) {
   lcd.home();
   now = RTC.now(); // Obtiene la fecha y hora del RTC
-
-  checkDigits(now.day());
-  lcd.print('/');
-  checkDigits(now.month());
-  lcd.print('/');
-  checkDigits(now.year());
-  lcd.print(' ');
-  lcd.setCursor(0, 1);
-  checkDigits(now.hour());
-  lcd.print(':');
-  checkDigits(now.minute());
-  lcd.print(':');
-  checkDigits(now.second());
-
+  if(oldMinute != now.minute() || forced){
+    checkDigits(now.day());
+    lcd.print('/');
+    checkDigits(now.month());
+    lcd.print('/');
+    checkDigits(now.year());
+    lcd.print(' ');
+    lcd.setCursor(0, 1);
+    checkDigits(now.hour());
+    lcd.print(':');
+    checkDigits(now.minute());
+    //lcd.print(':');
+    //checkDigits(now.second());
+    oldMinute = now.minute();
+    }
 }
 void checkDigits(int value) {
   //this function adds a 0 before the digits if is
@@ -294,4 +275,26 @@ void initializeLcd(){
   lcd.home();
   lcd.clear();
   lcd.noBlink();
+}
+void initializeRTC(){
+  RTC.begin();
+  getTime(true);
+  if(checkTime()){
+    lcd.clear();
+    oldMinute = now.minute();
+    Serial.println("Trying to reload time...");
+    RTC.adjust(DateTime(__DATE__, __TIME__)); // Establece la fecha y hora (Comentar una vez establecida la hora)
+    if(checkTime){
+      Serial.println("Impossible to reload");
+    }
+    while(true){
+      lcd.home();
+      lcd.print("RELOAD CLOCK!!");
+    }
+  }
+}
+boolean checkTime(){
+  //returns true when failure time and date it set.
+  Serial.println("Checking time");
+  return (now.day()==1 && now.month()==1 && now.year()== 2000 && now.hour()==0 && now.minute()==0 && now.second()==0);
 }
