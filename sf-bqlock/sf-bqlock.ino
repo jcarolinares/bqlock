@@ -49,7 +49,7 @@ bool debug = true;
 
 //alarm variables
 bool isAlarmOn = false;
-int alarmHour=13, alarmMinute=30;
+int alarmHour=13, alarmMinute=48;
 DateTime now;
 
 int pinBuz = 6;
@@ -57,19 +57,36 @@ bool playedOnce = false;
 
 int mode = 0;
 int maxMode = 3;
+
+boolean checkTime(){
+  //returns true when failure time and date it set.
+  Serial.println("Checking time");
+  return (now.day()==1 && now.month()==1 && now.year()== 2000 && now.hour()==0 && now.minute()==0 && now.second()==0);
+}
 void setup () {
 
   Serial.begin(19200); // Establece la velocidad de datos del puerto serie
 
   Wire.begin();
-  //RTC setup
-  RTC.begin();
-  //RTC.adjust(DateTime(__DATE__, __TIME__)); // Establece la fecha y hora (Comentar una vez establecida la hora)
-
   //LCD setup
   initializeLcd();
   //Encoder setup
   initializeEncoder();
+  //RTC setup
+  RTC.begin();
+  getTime();
+  if(checkTime()){
+    lcd.clear();
+    Serial.println("Trying to reload time...");
+    RTC.adjust(DateTime(__DATE__, __TIME__)); // Establece la fecha y hora (Comentar una vez establecida la hora)
+    if(checkTime){
+      Serial.println("Impossible to reload");
+    }
+    while(true){
+      lcd.home();
+      lcd.print("RELOAD CLOCK!!");
+    }
+  }
 
   pinMode(pinBuz, OUTPUT);
 
@@ -79,24 +96,64 @@ void loop() {
   getTime();
   managePushEncoder();
   manageMode();
+  getTime();
+  printAlarmStatus();
   checkAlarm();
   if (debug) Serial.println(encoderValue);
 }
 
 void manageMode(){
   switch (mode){
-    mode 0:
+    case 0:
       getTime();
       printAlarmStatus();
+      delay(userDelay);
       break;
-    mode 1:
+    case 1:
       //cambio hora alarma
+      setAlarmHour();
+      delay(userDelay);
       break;
-    mode 2:
+    case 2:
       //cambio min alarma
+      setAlarmMin();
+      delay(userDelay);
       break;
   }
+}
 
+void setAlarmHour(){
+  lastEncoded = 3; //You must initialize the encoders pins on 11 (3) !!!
+  encoderValue = 0;
+  alarmHour = 0;
+  lcd.clear();
+  lcd.home();
+  lcd.print("Set hour: ");
+  while(!digitalRead(encoderSwitchPin)){
+    lcd.setCursor(10,0);
+    checkDigits(alarmHour);
+    alarmHour = constrain(encoderValue,0,96)/4;
+  }
+  lcd.clear();
+  lcd.print("HOUR SET");
+  delay(userDelay*3);
+
+}
+void setAlarmMin(){
+  lastEncoded = 3; //You must initialize the encoders pins on 11 (3) !!!
+  encoderValue = 0;
+  alarmHour = 0;
+  lcd.clear();
+  lcd.home();
+  lcd.print("Set min: ");
+  while(!digitalRead(encoderSwitchPin)){
+    lcd.setCursor(10,0);
+    checkDigits(alarmMinute);
+    alarmMinute = constrain(encoderValue,0,240)/4;
+  }
+  lcd.clear();
+  lcd.print("minute SET");
+  delay(userDelay*3);
 
 }
 void checkAlarm(){
@@ -149,6 +206,11 @@ void managePushEncoder() {
       if(mode == maxMode){
         mode = 0;
       }
+      if (debug){
+        Serial.print("Mode = ");
+        Serial.println(mode);
+      }
+      delay(userDelay);
 
     }
     delay(userDelay);//used for debouncing
@@ -170,6 +232,8 @@ void updateEncoder() {
 
   if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) encoderValue ++;
   if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) encoderValue --;
+
+
 
   lastEncoded = encoded; //store this value for next time
 }
