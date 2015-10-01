@@ -28,7 +28,7 @@ void setup () {
   lcd.display();
   lcd.setBacklight(HIGH);
   lcd.blink();
-  lcd.print("Hola Mundo I2C!");
+  lcd.print("Bqlock");
   //RTC.adjust(DateTime(__DATE__, __TIME__)); // Establece la fecha y hora (Comentar una vez establecida la hora)
   delay(1000);
   lcd.clear();
@@ -44,16 +44,16 @@ void getTime(){
   lcd.home();
   DateTime now = RTC.now(); // Obtiene la fecha y hora del RTC
 
-  lcd.print(now.day(), DEC); // Day
+  checkDigits(now.day());
   lcd.print('/');
-  lcd.print(now.month(), DEC); // Month
+  checkDigits(now.month()); // Month
   lcd.print('/');
-  lcd.print(now.year(), DEC); // Year
+  checkDigits(now.year()); // Year
   lcd.print(' ');
   lcd.setCursor(0,1);
-  lcd.print(now.hour(), DEC); // Hour
+  checkDigits(now.hour()); // Hour
   lcd.print(':');
-  lcd.print(now.minute(), DEC); // Minute
+  checkDigits(now.minute()); // Minute
   lcd.print(':');
   checkDigits(now.second());
   //lcd.print(now.second(), DEC); // Second
