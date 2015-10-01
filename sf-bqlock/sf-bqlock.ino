@@ -22,7 +22,7 @@ RTC_DS1307 RTC;
 LiquidCrystal lcd(0);
 
 //Encoder variables
-#define encoderSwitchPin  7
+#define encoderSwitchPin  4
 #define encoderPin1 2
 #define encoderPin2 3
 //Push buttons-encoder variables
@@ -47,12 +47,19 @@ int lastLSB = 0;
 //Other variables
 bool debug = true;
 
+//alarm variables
+bool isAlarmOn = false;
+int alarmHour=13, alarmMinute=30;
+DateTime now;
+
+int pinBuz = 6;
+bool playedOnce = false;
+
+int mode = 0;
+int maxMode = 3;
 void setup () {
 
   Serial.begin(19200); // Establece la velocidad de datos del puerto serie
-
-  //Encoder setup
-
 
   Wire.begin();
   //RTC setup
@@ -61,16 +68,63 @@ void setup () {
 
   //LCD setup
   initializeLcd();
+  //Encoder setup
   initializeEncoder();
+
+  pinMode(pinBuz, OUTPUT);
 
 }
 
 void loop() {
   getTime();
   managePushEncoder();
-  Serial.println(encoderValue);
+  manageMode();
+  checkAlarm();
+  if (debug) Serial.println(encoderValue);
 }
 
+void manageMode(){
+  switch (mode){
+    mode 0:
+      getTime();
+      printAlarmStatus();
+      break;
+    mode 1:
+      //cambio hora alarma
+      break;
+    mode 2:
+      //cambio min alarma
+      break;
+  }
+
+
+}
+void checkAlarm(){
+  int alarmDuration=250; //Real alarm duration will be alarmDuration * 2 * times
+  int times = 15;
+  if (isAlarmOn && now.hour() == alarmHour && now.minute() == alarmMinute && !playedOnce){
+    for (int i=0;i<times;i++){
+      Serial.println("Alarm ON");
+      tone(pinBuz, 500, alarmDuration);
+      delay(alarmDuration);
+      noTone(pinBuz);
+      delay(alarmDuration);
+      playedOnce = true;
+    }
+  }else if(now.hour() != alarmHour || now.minute() != alarmMinute){
+    playedOnce = false;
+  }
+}
+void printAlarmStatus(){
+  lcd.setCursor(11,0);
+  lcd.print("Alarm");
+  lcd.setCursor(11,1);
+  if (isAlarmOn){
+    lcd.print("On ");
+  }else{
+    lcd.print("Off");
+  }
+}
 void managePushEncoder() {
 
   nextTime = millis() + intervale;
@@ -87,9 +141,15 @@ void managePushEncoder() {
     if (millis() > nextTime) {
       //Long click
       if (debug) Serial.println("Long Click");
+      isAlarmOn = !isAlarmOn;
     } else {
       //Short click
       if (debug) Serial.println("Short Click");
+      mode++;
+      if(mode == maxMode){
+        mode = 0;
+      }
+
     }
     delay(userDelay);//used for debouncing
     clicked = false;
@@ -113,27 +173,24 @@ void updateEncoder() {
 
   lastEncoded = encoded; //store this value for next time
 }
-
 void getTime() {
   lcd.home();
-  DateTime now = RTC.now(); // Obtiene la fecha y hora del RTC
+  now = RTC.now(); // Obtiene la fecha y hora del RTC
 
   checkDigits(now.day());
   lcd.print('/');
-  checkDigits(now.month()); // Month
+  checkDigits(now.month());
   lcd.print('/');
-  checkDigits(now.year()); // Year
+  checkDigits(now.year());
   lcd.print(' ');
   lcd.setCursor(0, 1);
-  checkDigits(now.hour()); // Hour
+  checkDigits(now.hour());
   lcd.print(':');
-  checkDigits(now.minute()); // Minute
+  checkDigits(now.minute());
   lcd.print(':');
   checkDigits(now.second());
-  //lcd.print(now.second(), DEC); // Second
 
 }
-
 void checkDigits(int value) {
   //this function adds a 0 before the digits if is
   //between 0 and 9
@@ -172,4 +229,5 @@ void initializeLcd(){
   delay(1000);
   lcd.home();
   lcd.clear();
+  lcd.noBlink();
 }
