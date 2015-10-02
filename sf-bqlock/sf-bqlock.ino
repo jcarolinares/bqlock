@@ -359,10 +359,11 @@ void getTempHum(){
 
   lcd.setCursor(6,0);
   lcd.print(t,1);
-  //lcd.setCursor(10,0);
+  lcd.setCursor(10,0);
   //lcd.print(" ");
+
   lcd.setCursor(6,1);
-  lcd.print(h);
+  lcd.print(h,1);
   lcd.setCursor(8,1);
   lcd.print("% ");
 }
