@@ -11,8 +11,11 @@
 #include "RTClib.h"
 #include "bqLiquidCrystal.h"
 #include <Encoder.h>
+#include <HTS221.h>
+#include <HTS221_Registers.h>
 
 /*
+  Just for the record.
   I2C_ADDR_LCD    0x20
   I2C_ADDR_RTC    0x68
 */
@@ -41,6 +44,10 @@ long lastencoderValue = 0;
 
 int lastMSB = 0;
 int lastLSB = 0;
+
+//Temperature and humidity variables
+HTS221 hts221;
+float h = 0.0, t = 0.0;
 
 //Other variables
 bool debug = true;
@@ -73,6 +80,7 @@ void setup () {
   //Encoder setup
   initializeEncoder();
   //RTC setup
+  initializeTH();
   initializeRTC();
 
   pinMode(pinBuz, OUTPUT);
@@ -80,12 +88,11 @@ void setup () {
 }
 
 void loop() {
-
   checkDayNight();
   managePushEncoder();
   manageMode();
   checkAlarm();
-  if (debug) Serial.println(encoderValue);
+
 }
 void manageMode(){
   switch (mode){
@@ -228,22 +235,25 @@ void updateEncoder() {
   lastEncoded = encoded; //store this value for next time
 }
 void getTime(bool forced) {
+  //If forced == true, then update time and date
   lcd.home();
   now = RTC.now(); // Obtiene la fecha y hora del RTC
   if(oldMinute != now.minute() || forced){
     checkDigits(now.day());
     lcd.print('/');
     checkDigits(now.month());
-    lcd.print('/');
-    checkDigits(now.year());
+
     lcd.print(' ');
     lcd.setCursor(0, 1);
     checkDigits(now.hour());
     lcd.print(':');
     checkDigits(now.minute());
-    //lcd.print(':');
-    //checkDigits(now.second());
+
     oldMinute = now.minute();
+
+    //use this function to update the temp and hum that is shown in lcd screen
+    //workarround :D
+    getTempHum();
     }
 }
 void checkDigits(int value) {
@@ -306,10 +316,24 @@ void initializeRTC(){
     }// stops here!
   }
 }
+void initializeTH(){
+  Serial.println("before begin");
+  hts221.begin();
+  Serial.println("After begin");
+  if (hts221.checkConnection()) {
+    if (debug){
+      Serial.println("Error checking HTS221 connection");
+    }
+  } else {
+    if(debug){
+      Serial.println("HTS221 connected");
+    }
+  }
+  getTempHum();
+}
 boolean checkTime(){
   //returns true when failure time and date it set.
-  Serial.print("Checking time =");
-  //2165/165/165 165:165:85
+
   if ((now.day()==165 && now.month()==165 && now.year()== 2165 && now.hour()==165 && now.minute()==165 && now.second()==85)){
     lcd.clear();
     lcd.home();
@@ -322,13 +346,22 @@ boolean checkTime(){
 }
 void checkDayNight(){
   int ldrValue = analogRead(pinLDR);
-  if (debug){
-    Serial.print("ldrValue");
-    Serial.println(ldrValue);
-  }
   if(ldrValue > threshold ){
     lcd.setBacklight(HIGH);
   }else{
     lcd.setBacklight(LOW);
   }
+}
+void getTempHum(){
+  h = int(hts221.getHumidity());
+  t = hts221.getTemperature();
+
+  lcd.setCursor(6,0);
+  lcd.print(t,1);
+  //lcd.setCursor(10,0);
+  //lcd.print(" ");
+  lcd.setCursor(6,1);
+  lcd.print(h,1);
+  lcd.setCursor(8,1);
+  lcd.print("% ");
 }
