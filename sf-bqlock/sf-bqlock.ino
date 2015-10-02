@@ -118,10 +118,9 @@ void setAlarmHour(){
     Serial.println(alarmHour);
     checkDigits(alarmHour);
   }
-  Serial.print("Set Hour: ");
-  Serial.println(alarmHour);
   lcd.clear();
-  lcd.print("HOUR SET");
+  lcd.print("HOUR SET: ");
+  checkDigits(alarmHour);
   delay(userDelay*1);
 }
 void setAlarmMin(){
@@ -137,7 +136,9 @@ void setAlarmMin(){
     alarmMinute = constrain(encoderValue,0,240)/4;
   }
   lcd.clear();
-  lcd.print("minute SET");
+  lcd.print("MINUTE SET: ");
+  checkDigits(alarmMinute);
+
   delay(userDelay*1);
 
 }
@@ -290,16 +291,19 @@ void initializeRTC(){
   getTime(true);
   if(checkTime()){
     lcd.clear();
+    lcd.home();
     oldMinute = now.minute();
-    Serial.println("Trying to reload time...");
+    lcd.print("Trying to reload time...");
     RTC.adjust(DateTime(__DATE__, __TIME__));
     if(checkTime){
-      Serial.println("Impossible to reload");
+      lcd.clear();
+      lcd.home();
+      lcd.print("Impossible to reload");
     }
     while(true){
-      lcd.home();
+      lcd.setCursor(0,1);
       lcd.print("RELOAD CLOCK!!");
-    }
+    }// stops here!
   }
 }
 boolean checkTime(){
@@ -310,6 +314,7 @@ boolean checkTime(){
     lcd.clear();
     lcd.home();
     lcd.print("Check Wiring");
+    while(true); // stops here!
   }
   boolean value  = (now.day()==1 && now.month()==1 && now.year()== 2000 && now.hour()==0 && now.minute()==0 && now.second()==0);
   Serial.println(value);
