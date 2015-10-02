@@ -17,7 +17,6 @@
   I2C_ADDR_RTC    0x68
 */
 
-
 LiquidCrystal lcd(0);
 
 //Encoder variables
@@ -45,6 +44,8 @@ int lastLSB = 0;
 
 //Other variables
 bool debug = true;
+int mode = 0;
+int maxMode = 2;
 
 //clock & alarm variables
 RTC_DS1307 RTC;
@@ -56,10 +57,11 @@ DateTime now;
 bool playedOnce = false;
 int oldMinute;
 
+
 int pinBuz = 6;
 
-int mode = 0;
-int maxMode = 2;
+int pinLDR = A3;
+int threshold = 200;
 
 void setup () {
 
@@ -78,6 +80,8 @@ void setup () {
 }
 
 void loop() {
+
+  checkDayNight();
   managePushEncoder();
   manageMode();
   checkAlarm();
@@ -169,10 +173,15 @@ void managePushEncoder() {
 
   nextTime = millis() + intervale;
   while (digitalRead(encoderSwitchPin)) {
+    //turn led on after clicked
+    digitalWrite(pinledLong, HIGH);
     clicked = true;
-    Serial.println("Inside while");
     if (millis() > nextTime) {
+      //blink led after clicked
       digitalWrite(pinledLong, HIGH);
+      delay(100);
+      digitalWrite(pinledLong, LOW);
+      delay(100);
     }
   }
   digitalWrite(pinledLong, LOW);
@@ -283,7 +292,7 @@ void initializeRTC(){
     lcd.clear();
     oldMinute = now.minute();
     Serial.println("Trying to reload time...");
-    RTC.adjust(DateTime(__DATE__, __TIME__)); // Establece la fecha y hora (Comentar una vez establecida la hora)
+    RTC.adjust(DateTime(__DATE__, __TIME__));
     if(checkTime){
       Serial.println("Impossible to reload");
     }
@@ -295,6 +304,26 @@ void initializeRTC(){
 }
 boolean checkTime(){
   //returns true when failure time and date it set.
-  Serial.println("Checking time");
-  return (now.day()==1 && now.month()==1 && now.year()== 2000 && now.hour()==0 && now.minute()==0 && now.second()==0);
+  Serial.print("Checking time =");
+  //2165/165/165 165:165:85
+  if ((now.day()==165 && now.month()==165 && now.year()== 2165 && now.hour()==165 && now.minute()==165 && now.second()==85)){
+    lcd.clear();
+    lcd.home();
+    lcd.print("Check Wiring");
+  }
+  boolean value  = (now.day()==1 && now.month()==1 && now.year()== 2000 && now.hour()==0 && now.minute()==0 && now.second()==0);
+  Serial.println(value);
+  return value;
+}
+void checkDayNight(){
+  int ldrValue = analogRead(pinLDR);
+  if (debug){
+    Serial.print("ldrValue");
+    Serial.println(ldrValue);
+  }
+  if(ldrValue > threshold ){
+    lcd.setBacklight(HIGH);
+  }else{
+    lcd.setBacklight(LOW);
+  }
 }
