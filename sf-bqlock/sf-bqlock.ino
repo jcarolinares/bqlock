@@ -70,6 +70,10 @@ int pinBuz = 6;
 int pinLDR = A3;
 int threshold = 200;
 
+void cleaaaar(){
+  delay(500);
+  lcd.clear();
+}
 void setup () {
 
   Serial.begin(19200); // Establece la velocidad de datos del puerto serie
@@ -78,6 +82,7 @@ void setup () {
   //LCD setup
   initializeLcd();
   //Encoder setup
+  cleaaaar();
   initializeEncoder();
   //RTC setup
   initializeTH();
@@ -86,13 +91,11 @@ void setup () {
   pinMode(pinBuz, OUTPUT);
 
 }
-
 void loop() {
   checkDayNight();
   managePushEncoder();
   manageMode();
   checkAlarm();
-
 }
 void manageMode(){
   switch (mode){
@@ -129,6 +132,7 @@ void setAlarmHour(){
   lcd.print("HOUR SET: ");
   checkDigits(alarmHour);
   delay(userDelay*1);
+  lcd.clear();
 }
 void setAlarmMin(){
   lastEncoded = 3; //You must initialize the encoders pins on 11 (3) !!!
@@ -145,8 +149,8 @@ void setAlarmMin(){
   lcd.clear();
   lcd.print("MINUTE SET: ");
   checkDigits(alarmMinute);
-
   delay(userDelay*1);
+  lcd.clear();
 
 }
 void checkAlarm(){
@@ -215,7 +219,6 @@ void managePushEncoder() {
   }
 
 }
-//Function to update encoder value
 void updateEncoder() {
 
   int MSB = digitalRead(encoderPin1); //MSB = most significant bit
@@ -317,9 +320,7 @@ void initializeRTC(){
   }
 }
 void initializeTH(){
-  Serial.println("before begin");
   hts221.begin();
-  Serial.println("After begin");
   if (hts221.checkConnection()) {
     if (debug){
       Serial.println("Error checking HTS221 connection");
@@ -361,7 +362,7 @@ void getTempHum(){
   //lcd.setCursor(10,0);
   //lcd.print(" ");
   lcd.setCursor(6,1);
-  lcd.print(h,1);
+  lcd.print(h);
   lcd.setCursor(8,1);
   lcd.print("% ");
 }
