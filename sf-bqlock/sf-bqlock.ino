@@ -81,6 +81,9 @@ int blueValue = 0;         // value to write to the blue LED
 
 //Create ZumRGB object to control the Zum RGB LED module
 ZumRGB myRGB(redPin, greenPin, bluePin);
+int alarmColor[3] = {255,255,255}; // set alarm led color over here!
+
+int pushColor[3] = {255,0,0}, longPushColor[3] = {0,255,0};
 void setup () {
 
   Serial.begin(19200); // Establece la velocidad de datos del puerto serie
@@ -97,9 +100,6 @@ void setup () {
   initializeRGB();
   pinMode(pinBuz, OUTPUT);
 
-  myRGB.crossFade(255,255,255);
-  delay(1000);
-  myRGB.crossFade(0,0,0);
 
 }
 void loop() {
@@ -168,6 +168,7 @@ void checkAlarm(){
   int alarmDuration=250; //Real alarm duration will be alarmDuration * 2 * times
   int times = 15;
   if (isAlarmOn && now.hour() == alarmHour && now.minute() == alarmMinute && !playedOnce){
+    myRGB.crossFade(alarmColor[0],alarmColor[1],alarmColor[3]); // set to color
     for (int i=0;i<times;i++){
       Serial.println("Alarm ON");
       tone(pinBuz, 500, alarmDuration);
@@ -176,6 +177,7 @@ void checkAlarm(){
       delay(alarmDuration);
       playedOnce = true;
     }
+    myRGB.crossFade(0,0,0); // turn off.
   }else if(now.hour() != alarmHour || now.minute() != alarmMinute){
     playedOnce = false;
   }
@@ -197,17 +199,17 @@ void managePushEncoder() {
   nextTime = millis() + intervale;
   while (digitalRead(encoderSwitchPin)) {
     //turn led on after clicked
-    digitalWrite(pinledLong, HIGH);
+    myRGB.setRGBcolor(pushColor[1],pushColor[2],pushColor[3]);
     clicked = true;
     if (millis() > nextTime) {
       //blink led after clicked
-      digitalWrite(pinledLong, HIGH);
+      myRGB.setRGBcolor(longPushColor[1],longPushColor[2],longPushColor[3]);
       delay(100);
-      digitalWrite(pinledLong, LOW);
+      myRGB.setRGBcolor(0,0,0);
       delay(100);
     }
   }
-  digitalWrite(pinledLong, LOW);
+  myRGB.setRGBcolor(0,0,0);
 
   if (clicked) {
     if (millis() > nextTime) {
