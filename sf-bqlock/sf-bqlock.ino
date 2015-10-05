@@ -13,6 +13,8 @@
 #include <Encoder.h>
 #include <HTS221.h>
 #include <HTS221_Registers.h>
+#include <ZumRGB.h>
+
 
 /*
   Just for the record.
@@ -23,8 +25,8 @@
 LiquidCrystal lcd(0);
 
 //Encoder variables
-#define encoderSwitchPin  4
 #define encoderPin1 2
+#define encoderSwitchPin  4
 #define encoderPin2 3
 //Push buttons-encoder variables
 int pinledLong = 13;
@@ -70,10 +72,17 @@ int pinBuz = 6;
 int pinLDR = A3;
 int threshold = 200;
 
-void cleaaaar(){
-  delay(500);
-  lcd.clear();
-}
+//RGB variables
+const int redPin = 9;      // RGB red LED connected to digital pin 9
+const int greenPin = 10;   // RGB green LED connected to digital pin 10
+const int bluePin = 11;    // RGB blue LED connected to digital pin 11
+
+int redValue = 0;          // value to write to the red LED
+int greenValue = 0;        // value to write to the green LED
+int blueValue = 0;         // value to write to the blue LED
+
+//Create ZumRGB object to control the Zum RGB LED module
+ZumRGB myRGB(redPin, greenPin, bluePin);
 void setup () {
 
   Serial.begin(19200); // Establece la velocidad de datos del puerto serie
@@ -82,7 +91,6 @@ void setup () {
   //LCD setup
   initializeLcd();
   //Encoder setup
-  cleaaaar();
   initializeEncoder();
   //RTC setup
   initializeTH();
@@ -90,6 +98,16 @@ void setup () {
 
   pinMode(pinBuz, OUTPUT);
 
+  //RGB Setup
+
+  pinMode(redPin,OUTPUT);
+  pinMode(greenPin,OUTPUT);
+  pinMode(bluePin,OUTPUT);
+
+  myRGB.setRGBWait(2); //2ms insted of 10ms
+  myRGB.crossFade(255,255,255);
+  delay(2000);
+  myRGB.crossFade(0,0,0);
 }
 void loop() {
   checkDayNight();
@@ -129,10 +147,8 @@ void setAlarmHour(){
     checkDigits(alarmHour);
   }
   lcd.clear();
-  lcd.print("HOUR SET: ");
-  checkDigits(alarmHour);
+  lcd.print("HOUR SET");
   delay(userDelay*1);
-  lcd.clear();
 }
 void setAlarmMin(){
   lastEncoded = 3; //You must initialize the encoders pins on 11 (3) !!!
@@ -147,16 +163,15 @@ void setAlarmMin(){
     alarmMinute = constrain(encoderValue,0,240)/4;
   }
   lcd.clear();
-  lcd.print("MINUTE SET: ");
-  checkDigits(alarmMinute);
+  lcd.print("minute SET");
   delay(userDelay*1);
-  lcd.clear();
 
 }
 void checkAlarm(){
   int alarmDuration=250; //Real alarm duration will be alarmDuration * 2 * times
   int times = 15;
   if (isAlarmOn && now.hour() == alarmHour && now.minute() == alarmMinute && !playedOnce){
+    myRGB.crossFade(255,255,255);
     for (int i=0;i<times;i++){
       Serial.println("Alarm ON");
       tone(pinBuz, 500, alarmDuration);
@@ -165,6 +180,7 @@ void checkAlarm(){
       delay(alarmDuration);
       playedOnce = true;
     }
+    myRGB.crossFade(0,0,0);
   }else if(now.hour() != alarmHour || now.minute() != alarmMinute){
     playedOnce = false;
   }
@@ -219,6 +235,7 @@ void managePushEncoder() {
   }
 
 }
+//Function to update encoder value
 void updateEncoder() {
 
   int MSB = digitalRead(encoderPin1); //MSB = most significant bit
@@ -238,25 +255,22 @@ void updateEncoder() {
   lastEncoded = encoded; //store this value for next time
 }
 void getTime(bool forced) {
-  //If forced == true, then update time and date
   lcd.home();
   now = RTC.now(); // Obtiene la fecha y hora del RTC
   if(oldMinute != now.minute() || forced){
     checkDigits(now.day());
     lcd.print('/');
     checkDigits(now.month());
-
+    lcd.print('/');
+    checkDigits(now.year());
     lcd.print(' ');
     lcd.setCursor(0, 1);
     checkDigits(now.hour());
     lcd.print(':');
     checkDigits(now.minute());
-
+    //lcd.print(':');
+    //checkDigits(now.second());
     oldMinute = now.minute();
-
-    //use this function to update the temp and hum that is shown in lcd screen
-    //workarround :D
-    getTempHum();
     }
 }
 void checkDigits(int value) {
@@ -304,19 +318,16 @@ void initializeRTC(){
   getTime(true);
   if(checkTime()){
     lcd.clear();
-    lcd.home();
     oldMinute = now.minute();
-    lcd.print("Trying to reload time...");
-    RTC.adjust(DateTime(__DATE__, __TIME__));
+    Serial.println("Trying to reload time...");
+    RTC.adjust(DateTime(__DATE__, __TIME__)); // Establece la fecha y hora (Comentar una vez establecida la hora)
     if(checkTime){
-      lcd.clear();
-      lcd.home();
-      lcd.print("Impossible to reload");
+      Serial.println("Impossible to reload");
     }
     while(true){
-      lcd.setCursor(0,1);
+      lcd.home();
       lcd.print("RELOAD CLOCK!!");
-    }// stops here!
+    }
   }
 }
 void initializeTH(){
@@ -332,27 +343,6 @@ void initializeTH(){
   }
   getTempHum();
 }
-boolean checkTime(){
-  //returns true when failure time and date it set.
-
-  if ((now.day()==165 && now.month()==165 && now.year()== 2165 && now.hour()==165 && now.minute()==165 && now.second()==85)){
-    lcd.clear();
-    lcd.home();
-    lcd.print("Check Wiring");
-    while(true); // stops here!
-  }
-  boolean value  = (now.day()==1 && now.month()==1 && now.year()== 2000 && now.hour()==0 && now.minute()==0 && now.second()==0);
-  Serial.println(value);
-  return value;
-}
-void checkDayNight(){
-  int ldrValue = analogRead(pinLDR);
-  if(ldrValue > threshold ){
-    lcd.setBacklight(HIGH);
-  }else{
-    lcd.setBacklight(LOW);
-  }
-}
 void getTempHum(){
   h = int(hts221.getHumidity());
   t = hts221.getTemperature();
@@ -366,4 +356,23 @@ void getTempHum(){
   lcd.print(h,1);
   lcd.setCursor(8,1);
   lcd.print("% ");
+}
+boolean checkTime(){
+  //returns true when failure time and date it set.
+  Serial.print("Checking time =");
+  boolean value  = (now.day()==1 && now.month()==1 && now.year()== 2000 && now.hour()==0 && now.minute()==0 && now.second()==0);
+  Serial.println(value);
+  return value;
+}
+void checkDayNight(){
+  int ldrValue = analogRead(pinLDR);
+  if (debug){
+    Serial.print("ldrValue");
+    Serial.println(ldrValue);
+  }
+  if(ldrValue > threshold ){
+    lcd.setBacklight(HIGH);
+  }else{
+    lcd.setBacklight(LOW);
+  }
 }
