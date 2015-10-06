@@ -58,7 +58,7 @@ int maxMode = 2;
 RTC_DS1307 RTC;
 
 bool isAlarmOn = false;
-int alarmHour=13, alarmMinute=48;
+int alarmHour=7, alarmMinute=30;  // you can set the default alarm here
 DateTime now;
 
 bool playedOnce = false;
@@ -73,7 +73,8 @@ int threshold = 200;
 // RGB LED setup
 const int redPin = 9;      // RGB red LED connected to digital pin 9
 const int greenPin = 10;   // RGB green LED connected to digital pin 10
-const int bluePin = 11;    // RGB blue LED connected to digital pin 11
+const int bluePin = 5;    // RGB blue LED connected to digital pin 11
+//moved bluePin from 11 to 5 due interfere with tone function
 
 int redValue = 0;          // value to write to the red LED
 int greenValue = 0;        // value to write to the green LED
@@ -83,7 +84,9 @@ int blueValue = 0;         // value to write to the blue LED
 ZumRGB myRGB(redPin, greenPin, bluePin);
 int alarmColor[3] = {255,255,255}; // set alarm led color over here!
 
-int pushColor[3] = {255,0,0}, longPushColor[3] = {0,255,0};
+int pushColor[3] = {255,0,0}, longPushColor[3] = {0,255,0}; //You can set colors here for push and long push of the encoder here
+
+
 void setup () {
 
   Serial.begin(19200); // Establece la velocidad de datos del puerto serie
