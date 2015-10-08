@@ -1,9 +1,16 @@
 /*
   bqlock
-  Julian Caro
+  Julián Caro
   Luis Díaz
   diwo.bq.com
 */
+
+/*
+To-do:
+Change text shown when setting alarm hour & minute
+Fix alarm hour & minute showing 24 and 60. no sense at all!!
+*/
+
 
 //libraries
 #include <Wire.h>
@@ -141,11 +148,17 @@ void setAlarmHour(){
     alarmHour = constrain(encoderValue,0,96)/4;
     Serial.println(alarmHour);
     checkDigits(alarmHour);
+    if(alarmHour == 24){
+      lastEncoded = 3;
+      encoderValue = 0;
+      alarmHour=0;
+    }
   }
   lcd.clear();
-  lcd.print("HOUR SET: ");
+  lcd.print("ALARM HOUR SET:");
+  lcd.setCursor(0,1);
   checkDigits(alarmHour);
-  delay(userDelay*1);
+  delay(userDelay*2);
   lcd.clear();
 }
 void setAlarmMin(){
@@ -159,11 +172,17 @@ void setAlarmMin(){
     lcd.setCursor(10,0);
     checkDigits(alarmMinute);
     alarmMinute = constrain(encoderValue,0,240)/4;
+    if(alarmMinute == 60){
+      lastEncoded = 3;
+      encoderValue = 0;
+      alarmMinute=0;
+    }
   }
   lcd.clear();
-  lcd.print("MINUTE SET: ");
+  lcd.print("ALARM MINUTE SET:"); // <-------
+  lcd.setCursor(0,1);
   checkDigits(alarmMinute);
-  delay(userDelay*1);
+  delay(userDelay*2);
   lcd.clear();
 
 }
